@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}AI CareerGap — Free Skill Gap Analysis for Students{% endblock %}
+
+{% block content %}
+
+<!-- SDG Banner -->
+<div class="sdg-banner" role="complementary" aria-label="UN SDG 8 connection">
+  <div class="sdg-badge">SDG 8</div>
+  <div class="sdg-text">
+    <h3>Supporting UN Sustainable Development Goal 8</h3>
+    <p>Decent Work &amp; Economic Growth &mdash; helping students everywhere access quality career preparation, regardless of background or resources.</p>
+  </div>
+</div>
+
+<!-- Hero -->
+<section class="hero" aria-labelledby="hero-heading">
+  <h1 id="hero-heading">Close Your <span style="color: var(--color-accent)">Career Gap</span><br>with AI Guidance</h1>
+  <p class="lead">
+    Many students finish their studies without knowing exactly which skills employers need &mdash;
+    or how to learn them. AI CareerGap compares your skills to real job requirements and builds
+    you a personalised, step-by-step learning plan using free resources.
+  </p>
+  <div class="hero-actions">
+    <a href="{{ url_for('assess') }}" class="btn btn-primary btn-lg">🚀 Assess My Skills</a>
+    <a href="#how-it-works" class="btn btn-outline btn-lg">How it works</a>
+  </div>
+</section>
+
+<hr>
+
+<!-- Feature highlights -->
+<section aria-labelledby="features-heading">
+  <h2 id="features-heading" style="text-align:center; margin-bottom: 1.25rem">Everything you need to get job-ready</h2>
+  <div class="features">
+    <div class="feature-card">
+      <div class="feat-icon">🔍</div>
+      <h3>Skill Gap Analysis</h3>
+      <p>See exactly which skills you have, which are missing, and your match percentage for the role.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feat-icon">🗺️</div>
+      <h3>Learning Roadmap</h3>
+      <p>A week-by-week plan built around how many hours you can study, with free resource suggestions.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feat-icon">💡</div>
+      <h3>Practice Challenges</h3>
+      <p>One hands-on exercise for every skill you're missing — learn by doing, not just watching.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feat-icon">🏗️</div>
+      <h3>Portfolio Project</h3>
+      <p>A tailored project idea that demonstrates multiple skills to potential employers at once.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feat-icon">✅</div>
+      <h3>Progress Tracker</h3>
+      <p>Check off tasks and add notes as you complete them — saved in your browser automatically.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feat-icon">🤖</div>
+      <h3>AI Career Mentor</h3>
+      <p>Ask your career questions and get personalised advice powered by Google Gemini.</p>
+    </div>
+  </div>
+</section>
+
+<hr>
+
+<!-- How it works -->
+<section id="how-it-works" aria-labelledby="how-heading">
+  <h2 id="how-heading">How it works</h2>
+  <ol style="padding-left: 1.5rem; margin-top: .75rem;">
+    <li><strong>Tell us your goal</strong> — choose a target career (e.g. Data Analyst) or paste a job description.</li>
+    <li><strong>List your current skills</strong> — just type them, separated by commas.</li>
+    <li><strong>Set your study hours</strong> — how many hours per week can you dedicate?</li>
+    <li><strong>Get your plan</strong> — see your match score, gaps, learning plan, challenges, and project idea.</li>
+    <li><strong>Track your progress</strong> — check off roadmap tasks and use the AI mentor for support.</li>
+  </ol>
+</section>
+
+<hr>
+
+<!-- Supported roles -->
+<section aria-labelledby="roles-heading">
+  <h2 id="roles-heading">Supported career paths</h2>
+  <p class="muted" style="margin-bottom: .75rem">These roles have detailed built-in skill profiles. You can also paste any job description for a custom analysis.</p>
+  <div class="tag-list" style="margin-top: 0">
+    {% for role in supported_roles %}
+      <span class="tag tag-blue">{{ role }}</span>
+    {% endfor %}
+    <span class="tag tag-grey">+ any job description</span>
+  </div>
+</section>
+
+<hr>
+
+<!-- SDG detail -->
+<section aria-labelledby="sdg-heading">
+  <h2 id="sdg-heading">🌍 Why SDG 8?</h2>
+  <div class="card">
+    <p>
+      <strong>UN Sustainable Development Goal 8</strong> calls for "full and productive employment and decent work for all."
+      A key barrier to decent work for young people is the <em>skills gap</em> &mdash; the mismatch between what students
+      learn in education and what employers actually need. This gap disproportionately affects students who lack access to
+      career advisors, industry networks, or paid coaching.
+    </p>
+    <p>
+      AI CareerGap addresses this directly: it is free, requires no sign-up, and gives every student &mdash; regardless of
+      location or background &mdash; the same quality of career preparation advice that others pay for. By making skill gap
+      analysis and personalised learning plans accessible to all, we contribute to more equitable pathways to decent work
+      and economic participation.
+    </p>
+  </div>
+</section>
+
+<!-- CTA -->
+<div style="text-align: center; padding: 2rem 0 1rem;">
+  <a href="{{ url_for('assess') }}" class="btn btn-primary btn-lg">🚀 Start Your Free Assessment</a>
+</div>
+
+{% endblock %}

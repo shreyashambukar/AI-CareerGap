@@ -1,0 +1,26 @@
+# Rename this file to .gitignore (remove the .example extension)
+# before running: git init && git add .
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments — never commit these
+.venv/
+venv/
+env/
+
+# Environment variables — NEVER commit .env, it contains your API key
+.env
+
+# Editor / OS artefacts
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Flask instance folder
+instance/
+*.log

@@ -1,0 +1,115 @@
+{
+  "Data Analyst": {
+    "required": [
+      "SQL",
+      "Excel",
+      "Python",
+      "Data Visualization",
+      "Statistics",
+      "Power BI",
+      "Tableau",
+      "Data Cleaning"
+    ],
+    "preferred": [
+      "R",
+      "Google Analytics",
+      "A/B Testing",
+      "Business Intelligence",
+      "Pandas",
+      "Communication Skills"
+    ],
+    "description": "Data Analysts collect, process, and perform statistical analyses on large datasets to help organisations make better decisions."
+  },
+  "Data Scientist": {
+    "required": [
+      "Python",
+      "Machine Learning",
+      "Statistics",
+      "SQL",
+      "Pandas",
+      "NumPy",
+      "Data Visualization",
+      "Scikit-learn"
+    ],
+    "preferred": [
+      "Deep Learning",
+      "TensorFlow",
+      "PyTorch",
+      "Natural Language Processing",
+      "R",
+      "Spark",
+      "Feature Engineering",
+      "Model Deployment"
+    ],
+    "description": "Data Scientists build predictive models and extract insights from complex data to drive strategic business decisions."
+  },
+  "AI Engineer": {
+    "required": [
+      "Python",
+      "Machine Learning",
+      "Deep Learning",
+      "TensorFlow",
+      "PyTorch",
+      "APIs",
+      "Model Deployment",
+      "Docker"
+    ],
+    "preferred": [
+      "Large Language Models",
+      "Prompt Engineering",
+      "MLOps",
+      "Cloud Platforms",
+      "Kubernetes",
+      "FastAPI",
+      "Vector Databases",
+      "LangChain"
+    ],
+    "description": "AI Engineers design, build, and deploy AI-powered systems and integrate machine learning models into production applications."
+  },
+  "Machine Learning Engineer": {
+    "required": [
+      "Python",
+      "Machine Learning",
+      "Scikit-learn",
+      "TensorFlow",
+      "PyTorch",
+      "Data Pipelines",
+      "SQL",
+      "Model Deployment"
+    ],
+    "preferred": [
+      "MLOps",
+      "Docker",
+      "Kubernetes",
+      "Spark",
+      "Cloud Platforms",
+      "Feature Engineering",
+      "A/B Testing",
+      "Deep Learning"
+    ],
+    "description": "ML Engineers build the infrastructure and pipelines that bring machine learning models from research into reliable production systems."
+  },
+  "Web Developer": {
+    "required": [
+      "HTML",
+      "CSS",
+      "JavaScript",
+      "Responsive Design",
+      "Git",
+      "APIs",
+      "React",
+      "Node.js"
+    ],
+    "preferred": [
+      "TypeScript",
+      "Python",
+      "SQL",
+      "Docker",
+      "Testing",
+      "Accessibility",
+      "Performance Optimization",
+      "Webpack"
+    ],
+    "description": "Web Developers design and build websites and web applications, handling both front-end interfaces and back-end services."
+  }
+}

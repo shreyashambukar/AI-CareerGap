@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}Assess My Skills — AI CareerGap{% endblock %}
+
+{% block content %}
+
+<div style="max-width: 640px; margin-inline: auto;">
+
+  <div style="margin-bottom: 1.75rem;">
+    <a href="{{ url_for('index') }}" class="muted back-link" style="text-decoration: none; font-size: .9rem;">← Back to home</a>
+    <h1 style="margin-top: .5rem;">Tell us about your goals</h1>
+    <p class="lead">Fill in the form below and we'll identify your skill gaps and build a personalised learning plan.</p>
+  </div>
+
+  <form action="{{ url_for('analyse') }}" method="post" id="assess-form">
+
+    <!-- Target career -->
+    <div class="form-group">
+      <label for="target_role">Target Career <span style="color: var(--color-danger)" aria-label="required">*</span></label>
+      <select name="target_role" id="target_role" required aria-describedby="role-hint">
+        <option value="" disabled selected>Choose a career path…</option>
+        {% for role in supported_roles %}
+          <option value="{{ role }}">{{ role }}</option>
+        {% endfor %}
+        <option value="Other">Other (use job description below)</option>
+      </select>
+      <p class="hint" id="role-hint">
+        Select one of our built-in profiles, or type a custom role name and paste a job description.
+        If you select "Other", a job description is required for accurate analysis.
+      </p>
+    </div>
+
+    <!-- Custom role name (shown when "Other" is selected) -->
+    <div class="form-group" id="custom-role-group" style="display: none;">
+      <label for="custom_role_name">Custom Role Name</label>
+      <input type="text" name="custom_role_name" id="custom_role_name"
+             placeholder="e.g. Cloud Architect, DevOps Engineer…"
+             aria-describedby="custom-role-hint" />
+      <p class="hint" id="custom-role-hint">This name will appear on your results page.</p>
+    </div>
+
+    <!-- Current skills -->
+    <div class="form-group">
+      <label for="current_skills">Your Current Skills <span style="color: var(--color-danger)" aria-label="required">*</span></label>
+      <textarea name="current_skills" id="current_skills" required
+                placeholder="Python, SQL, Excel, Data Visualization, Statistics…"
+                aria-describedby="skills-hint"
+                rows="4"></textarea>
+      <p class="hint" id="skills-hint">Separate skills with commas, new lines, or semicolons. Don't worry about exact spelling — matching is flexible.</p>
+    </div>
+
+    <!-- Job description (optional) -->
+    <div class="form-group">
+      <label for="job_description">
+        Job Description
+        <span class="tag tag-grey" style="font-weight: 400; margin-left: .4rem;">optional</span>
+      </label>
+      <textarea name="job_description" id="job_description"
+                placeholder="Paste the full job description here for a more accurate, personalised analysis…"
+                aria-describedby="jd-hint"
+                rows="6"></textarea>
+      <p class="hint" id="jd-hint">
+        If provided, AI CareerGap will extract the required and preferred skills directly from the posting.
+        If left blank, we use our built-in career profile for the role you selected.
+      </p>
+    </div>
+
+    <!-- Hours per week -->
+    <div class="form-group">
+      <label for="hours_per_week">Study Hours Available Per Week</label>
+      <div style="display: flex; align-items: center; gap: .75rem;">
+        <input type="number" name="hours_per_week" id="hours_per_week"
+               value="10" min="1" max="80"
+               style="width: 100px;"
+               aria-describedby="hours-hint" />
+        <span class="muted">hours / week</span>
+      </div>
+      <p class="hint" id="hours-hint">We use this to pace your learning plan. Even 5 hours per week adds up!</p>
+    </div>
+
+    <!-- Submit -->
+    <div style="display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; margin-top: 1.5rem;">
+      <button type="submit" class="btn btn-primary btn-lg">Analyse My Skills →</button>
+      <a href="{{ url_for('index') }}" class="btn btn-outline">Cancel</a>
+    </div>
+
+    <p class="hint" style="margin-top: .75rem;">No sign-up or payment required. Your data never leaves your browser session.</p>
+
+  </form>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Show custom role name field when "Other" is selected
+  const select = document.getElementById('target_role');
+  const customGroup = document.getElementById('custom-role-group');
+  const customInput = document.getElementById('custom_role_name');
+
+  select.addEventListener('change', function () {
+    if (this.value === 'Other') {
+      customGroup.style.display = 'block';
+      customInput.focus();
+    } else {
+      customGroup.style.display = 'none';
+      customInput.value = '';
+    }
+  });
+
+  // Merge custom role name into the select value on submit
+  document.getElementById('assess-form').addEventListener('submit', function (e) {
+    if (select.value === 'Other') {
+      const custom = customInput.value.trim();
+      if (!custom) {
+        e.preventDefault();
+        customInput.focus();
+        customInput.style.borderColor = 'var(--color-danger)';
+        return;
+      }
+      // Replace select value with typed name so Flask receives it
+      const hidden = document.createElement('input');
+      hidden.type = 'hidden';
+      hidden.name = 'target_role';
+      hidden.value = custom;
+      select.name = '_target_role_select'; // prevent duplicate key
+      this.appendChild(hidden);
+    }
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,374 @@
+{% extends "base.html" %}
+{% block title %}Results: {{ target_role }} — AI CareerGap{% endblock %}
+
+{% block content %}
+
+{# ----------------------------------------------------------------
+   Determine match category for styling
+   ---------------------------------------------------------------- #}
+{% if skill_data.match_percentage >= 70 %}
+  {% set pct_class = "high" %}
+  {% set pct_emoji = "🟢" %}
+  {% set pct_msg   = "Strong match — you have most of the core skills!" %}
+{% elif skill_data.match_percentage >= 40 %}
+  {% set pct_class = "medium" %}
+  {% set pct_emoji = "🟡" %}
+  {% set pct_msg   = "Good start — a focused learning plan will close the gap quickly." %}
+{% else %}
+  {% set pct_class = "low" %}
+  {% set pct_emoji = "🔴" %}
+  {% set pct_msg   = "Lots of room to grow — every expert started here. Your roadmap is ready!" %}
+{% endif %}
+
+<!-- ===== Action bar (screen only) ===== -->
+<div class="action-bar no-print">
+  <a href="{{ url_for('assess') }}" class="btn btn-outline">← Start a new analysis</a>
+  <button onclick="window.print()" class="btn btn-primary">🖨️ Print / Save as PDF</button>
+</div>
+
+<!-- ===== Print-only report header ===== -->
+<div class="print-only">
+  <h1 class="print-report-title">AI CareerGap — Career Report</h1>
+  <p class="print-report-sub">Target role: <strong>{{ target_role }}</strong></p>
+</div>
+
+<!-- ===== Gemini unavailable notice (always visible on screen) ===== -->
+{% if not gemini_available %}
+<div class="alert alert-warn no-print" role="alert">
+  <strong>⚠️ AI features are unavailable:</strong> No Gemini API key is configured.
+  Your skill analysis, learning plan, and roadmap below are fully accurate.
+  Copy <code>.env.example</code> to <code>.env</code> and add your key to enable AI-generated plans and the mentor chat.
+</div>
+{% endif %}
+
+<!-- ===== Match Summary ===== -->
+<div class="match-block" role="region" aria-label="Match summary">
+  <div class="match-pct {{ pct_class }}" aria-label="{{ skill_data.match_percentage }} percent match">
+    {{ skill_data.match_percentage }}%
+  </div>
+  <p class="match-title">Required Skills Match for <strong>{{ target_role }}</strong></p>
+  <p class="match-msg">{{ pct_emoji }} {{ pct_msg }}</p>
+
+  <div class="progress-wrap match-progress" role="progressbar"
+       aria-valuenow="{{ skill_data.match_percentage }}" aria-valuemin="0" aria-valuemax="100"
+       aria-label="Skill match progress bar">
+    <div class="progress-bar {{ pct_class }}" style="width: {{ skill_data.match_percentage }}%"></div>
+  </div>
+
+  <p class="progress-label">
+    Analysis source: <strong>{{ analysis_source }}</strong>
+    {% if role_description %}
+      &nbsp;&mdash;&nbsp;<em>{{ role_description }}</em>
+    {% endif %}
+  </p>
+</div>
+
+<!-- ===== Skills Breakdown ===== -->
+<section aria-labelledby="skills-section-heading">
+  <div class="section-title">
+    <span class="section-icon" aria-hidden="true">🎯</span>
+    <h2 id="skills-section-heading">Skills Breakdown</h2>
+  </div>
+
+  <div class="two-col">
+    <!-- Matched skills -->
+    <div class="card">
+      <div class="card-title card-title-success">✅ Skills You Have</div>
+      {% if skill_data.matched %}
+        <div class="tag-list">
+          {% for s in skill_data.matched %}
+            <span class="tag tag-green">{{ s }}</span>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="empty-note">None of the listed skills were matched — try adding more skills on the assessment form.</p>
+      {% endif %}
+    </div>
+
+    <!-- Required gaps -->
+    <div class="card">
+      <div class="card-title card-title-danger">❌ Missing Required Skills</div>
+      {% if skill_data.missing_required %}
+        <div class="tag-list">
+          {% for s in skill_data.missing_required %}
+            <span class="tag tag-red">{{ s }}</span>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="empty-note success-note">🎉 You have all the required skills!</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Preferred / nice-to-have -->
+  {% if skill_data.missing_preferred %}
+  <div class="card">
+    <div class="card-title card-title-warn">⭐ Missing Preferred Skills (nice-to-have)</div>
+    <div class="tag-list">
+      {% for s in skill_data.missing_preferred %}
+        <span class="tag tag-yellow">{{ s }}</span>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Your submitted skills (collapsed) -->
+  <details class="card details-card">
+    <summary>Your submitted skills ({{ skill_data.user_skills | length }})</summary>
+    <div class="tag-list tag-list-spaced">
+      {% for s in skill_data.user_skills %}
+        <span class="tag tag-grey">{{ s }}</span>
+      {% endfor %}
+    </div>
+  </details>
+</section>
+
+<!-- ===== Learning Plan ===== -->
+<section aria-labelledby="plan-heading">
+  <div class="section-title">
+    <span class="section-icon" aria-hidden="true">🗺️</span>
+    <h2 id="plan-heading">Your Personalised Learning Plan</h2>
+  </div>
+  <p class="section-sub">Based on <strong>{{ hours_per_week }}</strong> hours per week of study time.</p>
+
+  {% if not gaps %}
+    <div class="alert alert-success">🎉 No required skill gaps found — you're already qualified for this role! Consider brushing up on preferred skills or applying now.</div>
+  {% elif ai_plan and learning_plan_text %}
+    <div class="card plan-text">{{ learning_plan_text }}</div>
+  {% elif local_plan %}
+    {# Local fallback plan — grouped by week #}
+    {% set current_week = namespace(val=0) %}
+    {% for step in local_plan %}
+      {% if step.week != current_week.val %}
+        {% set current_week.val = step.week %}
+        <h3 class="week-heading">📅 Week {{ step.week }}</h3>
+      {% endif %}
+      <div class="card plan-step">
+        <div class="plan-step-skill">{{ step.skill }}</div>
+        <p class="plan-step-action">{{ step.action }}</p>
+        <p class="plan-step-meta">📚 {{ step.resource }}</p>
+        <p class="plan-step-meta">⏱ ~{{ step.hours }} hours to get started</p>
+      </div>
+    {% endfor %}
+  {% elif learning_plan_text %}
+    <div class="alert alert-warn">{{ learning_plan_text }}</div>
+  {% endif %}
+</section>
+
+<!-- ===== Practice Challenges ===== -->
+{% if challenges %}
+<section aria-labelledby="challenges-heading">
+  <div class="section-title">
+    <span class="section-icon" aria-hidden="true">💡</span>
+    <h2 id="challenges-heading">Skill Practice Challenges</h2>
+  </div>
+  <p class="section-sub">One hands-on exercise per missing required skill. Mark each one done as you complete it.</p>
+
+  <div id="challenge-list" role="list">
+    {% for item in challenges %}
+    <div class="challenge-card" role="listitem">
+      <div class="challenge-check-row">
+        <input type="checkbox" class="challenge-cb"
+               id="ch-{{ loop.index }}"
+               aria-labelledby="ch-label-{{ loop.index }}" />
+        <label class="challenge-skill-label" id="ch-label-{{ loop.index }}" for="ch-{{ loop.index }}">
+          {{ item.skill }}
+        </label>
+      </div>
+      <p class="challenge-text">{{ item.challenge }}</p>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<!-- ===== Portfolio Project ===== -->
+{% if portfolio_text %}
+<section aria-labelledby="portfolio-heading">
+  <div class="section-title">
+    <span class="section-icon" aria-hidden="true">🏗️</span>
+    <h2 id="portfolio-heading">Portfolio Project Idea</h2>
+  </div>
+  <div class="card plan-text">{{ portfolio_text }}</div>
+</section>
+{% endif %}
+
+<!-- ===== Interactive Roadmap Tracker ===== -->
+<section aria-labelledby="roadmap-heading" id="roadmap-section">
+  <div class="section-title">
+    <span class="section-icon" aria-hidden="true">✅</span>
+    <h2 id="roadmap-heading">Roadmap Tracker</h2>
+  </div>
+  <p class="section-sub">Check off tasks as you work through them. Progress resets on refresh — this is your working checklist for this session.</p>
+
+  <!-- Progress bar -->
+  <div class="roadmap-progress">
+    <div class="progress-wrap" role="progressbar" aria-label="Roadmap progress"
+         aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+      <div class="progress-bar low" id="roadmap-progress-bar" style="width: 0%"></div>
+    </div>
+    <p class="roadmap-progress-text" id="roadmap-progress-text">0 of 0 tasks completed</p>
+  </div>
+
+  <!-- Tasks list (populated by roadmap.js) -->
+  <div id="roadmap-tasks" role="list" aria-live="polite"></div>
+
+  <!-- Embedded data for roadmap.js -->
+  <script id="roadmap-data" type="application/json">
+    {
+      "role": {{ target_role | tojson }},
+      "gaps": {{ gaps | tojson }},
+      "tasks": [
+        {% for item in challenges %}
+        {
+          "id": "task-{{ loop.index }}",
+          "skill": {{ item.skill | tojson }},
+          "label": "Learn & practice: {{ item.skill | replace('"', '\\"') }}"
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+        {% if challenges and portfolio_text %},{% endif %}
+        {% if portfolio_text %}
+        {
+          "id": "task-portfolio",
+          "skill": "Portfolio",
+          "label": "Build your portfolio project"
+        }
+        {% endif %}
+      ]
+    }
+  </script>
+</section>
+
+<!-- ===== AI Career Mentor Chat ===== -->
+<section aria-labelledby="chat-heading" id="chat-section" class="no-print">
+  <div class="section-title">
+    <span class="section-icon" aria-hidden="true">🤖</span>
+    <h2 id="chat-heading">AI Career Mentor</h2>
+  </div>
+  <p class="section-sub">Ask anything about your career path, skill gaps, or learning strategy.</p>
+
+  {% if not gemini_available %}
+  <div class="alert alert-warn" role="alert">
+    The AI mentor requires a Gemini API key. Add <code>GEMINI_API_KEY</code> to your <code>.env</code> file to enable chat.
+  </div>
+  {% endif %}
+
+  <div class="chat-box" role="region" aria-label="AI career mentor chat">
+    <div class="chat-messages" id="chat-messages" aria-live="polite" aria-label="Chat history">
+      <div class="chat-msg">
+        <div class="msg-label">AI Mentor</div>
+        <div class="msg-bubble">
+          Hi! I'm your AI career mentor. I know your target role is <strong>{{ target_role }}</strong>{% if gaps %} and that you're working on: <em>{{ gaps[:3] | join(', ') }}{% if gaps|length > 3 %} and more{% endif %}</em>{% endif %}.
+          What questions can I help you with today?
+        </div>
+      </div>
+    </div>
+    <div class="chat-spinner" id="chat-spinner" aria-live="polite" aria-label="Sending message">⏳ Thinking…</div>
+    <form class="chat-form" id="chat-form" aria-label="Send a message to the AI mentor">
+      <input type="text" id="chat-input" placeholder="Ask a career question…"
+             autocomplete="off" aria-label="Your message" maxlength="500" />
+      <button type="submit" class="btn btn-primary btn-sm">Send</button>
+    </form>
+  </div>
+
+  <!-- Embedded context for chat JS -->
+  <script id="chat-context" type="application/json">
+    {
+      "role": {{ target_role | tojson }},
+      "gaps": {{ gaps | tojson }}
+    }
+  </script>
+</section>
+
+<!-- ===== Bottom CTA (screen only) ===== -->
+<div class="bottom-cta no-print">
+  <a href="{{ url_for('assess') }}" class="btn btn-primary btn-lg">🔄 Start a New Assessment</a>
+  <a href="{{ url_for('index') }}" class="btn btn-outline">← Back to Home</a>
+</div>
+
+{% endblock %}
+
+{# ----------------------------------------------------------------
+   Page scripts
+   ---------------------------------------------------------------- #}
+{% block scripts %}
+<script src="{{ url_for('static', filename='roadmap.js') }}"></script>
+<script>
+/* ----------------------------------------------------------------
+   Challenge checkbox — strikethrough on completion
+   ---------------------------------------------------------------- */
+document.querySelectorAll('.challenge-cb').forEach(function (cb) {
+  cb.addEventListener('change', function () {
+    const label = document.getElementById(cb.getAttribute('aria-labelledby'));
+    const card  = cb.closest('.challenge-card');
+    if (label) label.classList.toggle('done', cb.checked);
+    if (card)  card.classList.toggle('challenge-done', cb.checked);
+  });
+});
+
+/* ----------------------------------------------------------------
+   AI Mentor Chat
+   ---------------------------------------------------------------- */
+(function () {
+  const form     = document.getElementById('chat-form');
+  const input    = document.getElementById('chat-input');
+  const messages = document.getElementById('chat-messages');
+  const spinner  = document.getElementById('chat-spinner');
+
+  const ctxEl = document.getElementById('chat-context');
+  if (!ctxEl || !form) return;
+  const ctx = JSON.parse(ctxEl.textContent);
+
+  function escHtml(s) {
+    return s
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\n/g, '<br>');
+  }
+
+  function appendMsg(role, text) {
+    const div = document.createElement('div');
+    div.className = 'chat-msg' + (role === 'user' ? ' user' : '');
+    div.innerHTML =
+      '<div class="msg-label">' + (role === 'user' ? 'You' : 'AI Mentor') + '</div>' +
+      '<div class="msg-bubble">' + escHtml(text) + '</div>';
+    messages.appendChild(div);
+    messages.scrollTop = messages.scrollHeight;
+  }
+
+  form.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    const msg = input.value.trim();
+    if (!msg) return;
+
+    appendMsg('user', msg);
+    input.value = '';
+    spinner.style.display = 'block';
+    form.querySelector('button').disabled = true;
+
+    try {
+      const res = await fetch('/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          role: ctx.role,
+          gaps: ctx.gaps,
+          message: msg,
+          roadmap_context: ''
+        })
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      appendMsg('ai', data.reply);
+    } catch (err) {
+      appendMsg('ai', 'Sorry, there was a network error. Please check your connection and try again.');
+    } finally {
+      spinner.style.display = 'none';
+      form.querySelector('button').disabled = false;
+      input.focus();
+    }
+  });
+})();
+</script>
+{% endblock %}

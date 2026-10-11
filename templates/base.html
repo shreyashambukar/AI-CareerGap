@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}AI CareerGap{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+
+  <!-- ===== Site Header / Nav ===== -->
+  <header class="site-header no-print">
+    <div class="container header-inner">
+      <a href="{{ url_for('index') }}" class="site-logo">
+        <span class="logo-icon" aria-hidden="true">🎯</span>
+        <span>AI <strong>CareerGap</strong></span>
+      </a>
+      <nav aria-label="Main navigation">
+        <a href="{{ url_for('index') }}">Home</a>
+        <a href="{{ url_for('assess') }}" class="btn btn-sm btn-primary">Assess My Skills</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ===== Page Content ===== -->
+  <main class="container main-content">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- ===== Footer ===== -->
+  <footer class="site-footer no-print">
+    <div class="container footer-inner">
+      <p>
+        <span aria-hidden="true">🌍</span>
+        Supporting <a href="https://sdgs.un.org/goals/goal8" target="_blank" rel="noopener">UN SDG 8: Decent Work &amp; Economic Growth</a>
+      </p>
+      <p class="muted">AI CareerGap &mdash; Free skill gap analysis for students</p>
+    </div>
+  </footer>
+
+  <!-- Page-specific scripts -->
+  {% block scripts %}{% endblock %}
+
+</body>
+</html>
