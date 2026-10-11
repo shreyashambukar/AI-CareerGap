@@ -134,7 +134,7 @@
   {% if not gaps %}
     <div class="alert alert-success">🎉 No required skill gaps found — you're already qualified for this role! Consider brushing up on preferred skills or applying now.</div>
   {% elif ai_plan and learning_plan_text %}
-    <div class="card plan-text">{{ learning_plan_text }}</div>
+    <div class="card plan-text ai-content">{{ learning_plan_text | md_to_plain }}</div>
   {% elif local_plan %}
     {# Local fallback plan — grouped by week #}
     {% set current_week = namespace(val=0) %}
@@ -151,7 +151,7 @@
       </div>
     {% endfor %}
   {% elif learning_plan_text %}
-    <div class="alert alert-warn">{{ learning_plan_text }}</div>
+    <div class="alert alert-warn">{{ learning_plan_text | md_to_plain }}</div>
   {% endif %}
 </section>
 
@@ -189,7 +189,7 @@
     <span class="section-icon" aria-hidden="true">🏗️</span>
     <h2 id="portfolio-heading">Portfolio Project Idea</h2>
   </div>
-  <div class="card plan-text">{{ portfolio_text }}</div>
+  <div class="card plan-text ai-content">{{ portfolio_text | md_to_plain }}</div>
 </section>
 {% endif %}
 
@@ -286,6 +286,34 @@
   <a href="{{ url_for('index') }}" class="btn btn-outline">← Back to Home</a>
 </div>
 
+{% endblock %}
+
+{# ----------------------------------------------------------------
+   AI content styles (injected into <head> via block or inline here)
+   ---------------------------------------------------------------- #}
+{% block head_extra %}
+<style>
+/* ---- AI-generated plain-text content ---- */
+.ai-content { line-height: 1.7; }
+.ai-content h3.ai-heading,
+.ai-content h4.ai-heading {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 1.1em 0 0.3em;
+  color: var(--text, #1f2328);
+}
+.ai-content h3.ai-heading { font-size: 1.05rem; }
+.ai-content p { margin: 0.35em 0; }
+.ai-content p.ai-list-item {
+  display: flex;
+  gap: 0.45em;
+  align-items: baseline;
+  margin: 0.3em 0;
+}
+.ai-content .ai-num  { font-weight: 700; min-width: 1.5em; flex-shrink: 0; }
+.ai-content .ai-bullet { min-width: 1em; flex-shrink: 0; }
+.ai-content hr.ai-rule { border: none; border-top: 1px solid #e5e7eb; margin: 0.8em 0; }
+</style>
 {% endblock %}
 
 {# ----------------------------------------------------------------

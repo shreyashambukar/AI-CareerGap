@@ -8,6 +8,7 @@ import json
 import os
 import re
 
+from markupsafe import Markup, escape
 from dotenv import load_dotenv
 from flask import Flask, jsonify, redirect, render_template, request, url_for
 
@@ -19,6 +20,102 @@ load_dotenv()  # reads .env if present
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key-change-in-prod")
+
+
+# ---------------------------------------------------------------------------
+# Markdown → plain-text Jinja filter  (auto-escaping safe)
+# ---------------------------------------------------------------------------
+
+def _strip_md_inline(text: str) -> str:
+    """Remove bold/italic markers and backtick code spans from a line."""
+    # Bold+italic  ***…*** / ___…___
+    text = re.sub(r"\*{3}(.+?)\*{3}", r"\1", text)
+    text = re.sub(r"_{3}(.+?)_{3}", r"\1", text)
+    # Bold  **…** / __…__
+    text = re.sub(r"\*{2}(.+?)\*{2}", r"\1", text)
+    text = re.sub(r"_{2}(.+?)_{2}", r"\1", text)
+    # Italic  *…* / _…_  (only when surrounded by word chars or spaces)
+    text = re.sub(r"(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)", r"\1", text)
+    text = re.sub(r"(?<!_)_(?!_)(.+?)(?<!_)_(?!_)", r"\1", text)
+    # Inline code  `…`
+    text = re.sub(r"`(.+?)`", r"\1", text)
+    return text
+
+
+@app.template_filter("md_to_plain")
+def md_to_plain(raw: str) -> Markup:
+    """
+    Convert Gemini Markdown output to clean HTML paragraphs and headings
+    without using |safe on unsanitised AI text.
+
+    Rules applied (in order per line):
+      - Heading lines (###, ##, #) → <h4>/<h3>/<h3>
+      - Numbered list items (1. …) → plain paragraph with the number preserved
+      - Bullet list items (- … / * …) → plain paragraph with a bullet prefix
+      - Blank lines → paragraph break
+      - Everything is HTML-escaped before wrapping in tags
+    """
+    if not raw:
+        return Markup("")
+
+    lines = raw.splitlines()
+    html_parts: list[str] = []
+    pending: list[str] = []  # accumulate consecutive plain lines into a <p>
+
+    def flush_pending():
+        if pending:
+            content = escape(" ".join(pending))
+            html_parts.append(f"<p>{content}</p>")
+            pending.clear()
+
+    for line in lines:
+        stripped = line.strip()
+
+        # --- Blank line → paragraph break ---
+        if not stripped:
+            flush_pending()
+            continue
+
+        # --- Heading lines ---
+        h_match = re.match(r"^(#{1,3})\s+(.*)", stripped)
+        if h_match:
+            flush_pending()
+            level = len(h_match.group(1))
+            tag = "h4" if level >= 3 else "h3"
+            heading_text = escape(_strip_md_inline(h_match.group(2)))
+            html_parts.append(f"<{tag} class='ai-heading'>{heading_text}</{tag}>")
+            continue
+
+        # --- Numbered list items  "1. text" ---
+        num_match = re.match(r"^(\d+)\.\s+(.*)", stripped)
+        if num_match:
+            flush_pending()
+            item_text = escape(_strip_md_inline(num_match.group(2)))
+            html_parts.append(
+                f"<p class='ai-list-item'>"
+                f"<span class='ai-num'>{escape(num_match.group(1))}.</span> {item_text}</p>"
+            )
+            continue
+
+        # --- Bullet list items  "- text"  or  "* text" ---
+        bullet_match = re.match(r"^[-*]\s+(.*)", stripped)
+        if bullet_match:
+            flush_pending()
+            item_text = escape(_strip_md_inline(bullet_match.group(1)))
+            html_parts.append(f"<p class='ai-list-item'><span class='ai-bullet'>•</span> {item_text}</p>")
+            continue
+
+        # --- Horizontal rule ---
+        if re.match(r"^[-*_]{3,}$", stripped):
+            flush_pending()
+            html_parts.append("<hr class='ai-rule'>")
+            continue
+
+        # --- Plain text line — accumulate for paragraph merging ---
+        pending.append(_strip_md_inline(stripped))
+
+    flush_pending()
+    return Markup("\n".join(html_parts))
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash").strip()
@@ -378,18 +475,31 @@ def analyse():
         plan_prompt = f"""You are a helpful career coach for students.
 
 A student wants to become a {target_role}.
-Their skill gaps (missing required skills) are: {gap_list}.
-They have {hours_per_week} hours per week to study.
+Their missing required skills are: {gap_list}.
+They have {hours_per_week} hours per week available to study.
 
-Create a practical, week-by-week learning plan to close these gaps.
-For each week, specify:
-- Which skill(s) to focus on
-- One concrete action to take
-- One free resource to search for (give a search query, NOT a URL)
-- Estimated hours
+Write a SHORT week-by-week learning plan that closes exactly these skill gaps.
+Rules:
+- Focus on ONE skill per week only.
+- Give ONE concrete, achievable action for that week (e.g. "Complete the first two modules of …").
+- Give ONE free resource as a search query (never invent a URL — search terms only).
+- Each week entry must fit inside {hours_per_week} hours of study time.
+- Cover every missing skill; merge closely related skills into one week if needed.
+- Keep the tone encouraging and accessible to a beginner.
 
-Format your response as a clear numbered list. Keep it encouraging and beginner-friendly.
-Do not invent URLs — give search queries only."""
+Format each week exactly like this (use plain text headings with the word "Week"):
+
+Week 1 — [Skill Name]
+Action: [one sentence describing what to do]
+Resource: Search for "[search terms]"
+
+Week 2 — [Skill Name]
+Action: [one sentence]
+Resource: Search for "[search terms]"
+
+(continue for all skills)
+
+Do not add any introduction or closing paragraph — output only the week entries."""
 
         learning_plan_text, ai_plan = gemini_generate(plan_prompt)
         if not ai_plan:
@@ -403,18 +513,33 @@ Do not invent URLs — give search queries only."""
     ai_portfolio = False
 
     if gaps:
-        portfolio_prompt = f"""You are a career coach helping a student build a portfolio.
+        portfolio_prompt = f"""You are a career coach helping a beginner student build a portfolio.
 The student wants to become a {target_role}.
-Their skill gaps are: {', '.join(gaps[:5])}.
+Their missing skills are: {', '.join(gaps[:5])}.
 
-Suggest ONE practical portfolio project that:
-1. Demonstrates several of their missing skills at once
-2. Uses only free tools and public data
-3. Can be completed in a few weeks
-4. Would impress a hiring manager
+Suggest exactly ONE small, beginner-friendly portfolio project that:
+- Can realistically be completed in 1–2 weeks of part-time work.
+- Uses only free tools (e.g. Python, Google Colab, VS Code, GitHub).
+- Uses a freely available public dataset (e.g. from Kaggle, data.gov, or UCI ML Repository).
+- Practices at least two of the student's missing skills listed above.
+- Is specific and concrete — not vague or overly ambitious.
 
-Give the project a name, a short description (2–3 sentences), and the main technologies to use.
-Be specific but keep it achievable for a beginner."""
+Structure your answer with these exact plain-text headings (no Markdown bold or asterisks):
+
+Project Name: [a short memorable name]
+
+Purpose: [one sentence — what the project does and why it matters]
+
+Steps:
+1. [first concrete step]
+2. [second concrete step]
+3. [third concrete step]
+4. [optional fourth step]
+5. [optional fifth step]
+
+Final Deliverable: [one sentence describing what the student publishes, e.g. a GitHub repo with a README and a chart]
+
+Keep every step short and actionable. Do not suggest anything requiring paid tools, large teams, or more than two weeks of work."""
 
         portfolio_text, ai_portfolio = gemini_generate(portfolio_prompt)
         if not ai_portfolio:
